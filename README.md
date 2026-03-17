@@ -19,4 +19,4 @@ Before using this template:
 4. Add shared code under `src/main/java` only when it is truly cross-version.
 
 Notes:
-- The template is configured for Java 21 on 1.12.2 and Java 25 on 1.20.1 / 1.21.1.
+- The template is configured for Java 21 on 1.12.2 / 1.20.1 and Java 25 on 1.21.1.
