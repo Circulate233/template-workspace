@@ -140,7 +140,7 @@ val hasMixinSources = sequenceOf(
 ).any(::hasJavaSources)
 
 base {
-    archivesName.set(propertyString("mod_id"))
+    archivesName.set(propertyString("mod_id") + "-" + propertyString("minecraft_version"))
 }
 
 if (isLegacyRfg) {
@@ -301,6 +301,13 @@ repositories {
         name = "Zeitheron Maven"
         url = uri("https://maven.zeith.org")
     }
+    maven {
+        name = "GTNH Maven"
+        url = uri("https://nexus.gtnewhorizons.com/repository/public/")
+        content {
+            includeGroup("com.github.bsideup.jabel")
+        }
+    }
     mavenLocal()
 }
 
@@ -309,14 +316,14 @@ apply(from = projectDependenciesFile)
 dependencies {
     if (isLegacyRfg) {
         if (propertyBool("use_modern_java_syntax")) {
-            annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:1.0.0")
+            annotationProcessor("com.github.bsideup.jabel:jabel-javac-plugin:1.0.1")
             annotationProcessor("net.java.dev.jna:jna-platform:5.13.0")
-            compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:1.0.0") {
+            compileOnly("com.github.bsideup.jabel:jabel-javac-plugin:1.0.1") {
                 isTransitive = false
             }
             add("patchedMinecraft", "me.eigenraven.java8unsupported:java-8-unsupported-shim:1.0.0")
-            add("testAnnotationProcessor", "com.github.bsideup.jabel:jabel-javac-plugin:1.0.0")
-            add("testCompileOnly", "com.github.bsideup.jabel:jabel-javac-plugin:1.0.0") {
+            add("testAnnotationProcessor", "com.github.bsideup.jabel:jabel-javac-plugin:1.0.1")
+            add("testCompileOnly", "com.github.bsideup.jabel:jabel-javac-plugin:1.0.1") {
                 isTransitive = false
             }
         }
@@ -349,7 +356,7 @@ dependencies {
         }
     }
 
-    if (propertyBool("use_mixins") && !isLegacyRfg) {
+    if (propertyBool("use_mixins")) {
         compileOnly("org.spongepowered:mixin:0.8.5")
         annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
     }
@@ -465,9 +472,11 @@ tasks.named<Jar>("jar") {
     from(provider { embed.files.map { if (it.isDirectory) it else zipTree(it) } })
 }
 
-tasks.named<JavaCompile>("compileTestJava") {
-    sourceCompatibility = JavaVersion.VERSION_1_8.toString()
-    targetCompatibility = JavaVersion.VERSION_1_8.toString()
+if (isLegacyRfg) {
+    tasks.named<JavaCompile>("compileTestJava") {
+        sourceCompatibility = JavaVersion.VERSION_1_8.toString()
+        targetCompatibility = JavaVersion.VERSION_1_8.toString()
+    }
 }
 
 tasks.named<Test>("test") {
