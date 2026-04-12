@@ -1,4 +1,4 @@
-(configurations.findByName('ksp') ?: configurations.create('ksp'))
+(configurations.named('ksp') ?: configurations.create('ksp'))
 apply plugin: 'net.neoforged.moddev.legacyforge'
 apply plugin: 'dev.kikugie.fletching-table'
 
@@ -9,8 +9,18 @@ legacyForge {
 		neoForgeVersion = neoforge_version
 	}
 
-	runs {
-		client {
+    mods {
+        register(mod_id.toString()) {
+            sourceSet sourceSets.main
+        }
+    }
+
+    runs {
+        configureEach {
+            loadedMods = [mods.getByName(mod_id.toString())]
+        }
+
+        client {
 			client()
 		}
 		server {
@@ -18,12 +28,6 @@ legacyForge {
 		}
 		data {
 			data()
-		}
-	}
-
-	mods {
-		create(mod_id.toString()) {
-			sourceSet sourceSets.main
 		}
 	}
 }

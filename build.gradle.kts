@@ -31,6 +31,8 @@ val currentPlatform = (findProperty("platform") ?: "rfg").toString()
 val isLegacyRfg = currentPlatform == "rfg"
 val sharedResourcesDir = rootProject.file("src/main/resources")
 val localResourcesDir = file("src/main/resources")
+val mainResourceRoots = listOf(localResourcesDir, sharedResourcesDir)
+    .distinctBy { it.absolutePath }
 val activeResourcesDir = if (localResourcesDir.exists()) localResourcesDir else sharedResourcesDir
 val projectDependenciesFile = if (file("dependencies.gradle").exists()) file("dependencies.gradle") else rootProject.file("dependencies.gradle")
 
@@ -314,6 +316,10 @@ if (currentPlatform == "legacyforge" && propertyBool("use_mixins") && hasMixinSo
     }
 }
 
+the<JavaPluginExtension>().sourceSets.named("main") {
+    resources.setSrcDirs(mainResourceRoots)
+}
+
 repositories {
     exclusiveContent {
         forRepository {
@@ -481,6 +487,8 @@ if (isLegacyRfg && propertyBool("use_access_transformer")) {
 }
 
 tasks.named<ProcessResources>("processResources") {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     inputs.property("mod_id", propertyString("mod_id"))
     inputs.property("mod_name", propertyString("mod_name"))
     inputs.property("mod_version", propertyString("mod_version"))
@@ -622,7 +630,7 @@ val generateMixinJson = tasks.register("generateMixinJson") {
             val mixinFileExists = mixinFile.exists()
             val existingConfig: MutableMap<String, Any?> = if (mixinFileExists) {
                 @Suppress("UNCHECKED_CAST")
-                (JsonSlurper().parse(mixinFile) as Map<String, Any?>).toMutableMap<String, Any?>()
+                (JsonSlurper().parse(mixinFile) as Map<String, Any?>).toMutableMap()
             } else {
                 createDefaultMixinConfig().toMutableMap()
             }
@@ -703,6 +711,46 @@ val cleanroomAfterSync = tasks.register("cleanroomAfterSync") {
         dependsOn("injectTags")
     }
 }
+
+if (project != rootProject) {
+    val aggregateVersionArtifacts = run {
+        val taskKey = "aggregateVersionArtifactsProvider"
+        val extra = rootProject.extensions.extraProperties
+        if (extra.has(taskKey)) {
+            @Suppress("UNCHECKED_CAST")
+            extra.get(taskKey) as TaskProvider<Sync>
+        } else {
+            rootProject.tasks.register<Sync>("aggregateVersionArtifacts") {
+                group = "build"
+                description = "Collect versioned jars into the root build/libs directory."
+
+                into(rootProject.layout.buildDirectory.dir("libs"))
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+                rootProject.subprojects.forEach { versionProject ->
+                    from(versionProject.layout.buildDirectory.dir("libs")) {
+                        include("*.jar")
+                    }
+                    from(versionProject.layout.buildDirectory.dir("devlibs")) {
+                        include("*.jar")
+                        rename { fileName ->
+                            if (fileName.endsWith("-dev.jar")) {
+                                fileName
+                            } else {
+                                fileName.removeSuffix(".jar") + "-dev.jar"
+                            }
+                        }
+                    }
+                }
+            }.also { extra.set(taskKey, it) }
+        }
+    }
+
+    tasks.matching { it.name == "assemble" || it.name == "build" }.configureEach {
+        finalizedBy(aggregateVersionArtifacts)
+    }
+}
+
 
 if (isLegacyRfg && propertyBool("use_modern_java_syntax")) {
     tasks.withType<Javadoc>().configureEach {

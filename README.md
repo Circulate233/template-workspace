@@ -19,4 +19,7 @@ Before using this template:
 4. Add shared code under `src/main/java` only when it is truly cross-version.
 
 Notes:
-- The template is configured for Java 21 on 1.12.2 / 1.20.1 and Java 25 on 1.21.1.
+- 1.12.2 compiles with the configured toolchain but runs the client on Java 8 as required by RFG.
+- 1.20.1 is configured for Java 17.
+- 1.21.1 is configured for Java 21.
+- If you enable mixins on 1.21.1, add the corresponding [[mixins]] block and mixin config file yourself.
